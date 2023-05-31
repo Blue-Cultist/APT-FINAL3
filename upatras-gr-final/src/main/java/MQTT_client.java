@@ -13,17 +13,28 @@ import org.slf4j.LoggerFactory;
 
 
 public class MQTT_client implements MqttCallback {
+	Boolean subscriber;
+	Boolean publisher;
+
+public MQTT_client(int a, int b){
+	if(b>0) {
+		subscriber = true;
+	}
+	if(a>0) {
+		publisher = true;
+	}
+}
 MqttClient myClient;
 MqttConnectOptions connOpt;
 static final String M2MIO_THING = UUID.randomUUID().toString();
 static final String BROKER_URL = "tcp://test.mosquitto.org:1883";
 
-static final Boolean subscriber = true;
-static final Boolean publisher = true;
+//static final Boolean subscriber = true;
+//static final Boolean publisher = true;
 
 private Random rnd = new Random();
 private static final Logger log = LoggerFactory.getLogger(MQTT_client.class);
-public static final String TOPIC = "grupatras/lab/engine/temperature";
+public static final String TOPIC = "TEST_MQTT";
 
 public void connectionLost(Throwable t) {
 log.info("Connection lost!");
@@ -49,62 +60,63 @@ connOpt.setCleanSession(true);
 connOpt.setKeepAliveInterval(30);
 
 try {
-myClient = new MqttClient(BROKER_URL, clientID);
-myClient.setCallback(this);
-myClient.connect(connOpt);
+	myClient = new MqttClient(BROKER_URL, clientID);
+	myClient.setCallback(this);
+	myClient.connect(connOpt);
 } catch (MqttException e) {
-e.printStackTrace();
-System.exit(-1);
+	e.printStackTrace();
+	System.exit(-1);
 }
+
 log.info("Connected to " + BROKER_URL);
 String myTopic = TOPIC;
 MqttTopic topic = myClient.getTopic(myTopic);
 
 if (subscriber) {
 try {
-int subQoS = 0;
-myClient.subscribe(myTopic, subQoS);
-if (!publisher) {
-while (true) {
-Thread.sleep(1000);
-}
-}
+	int subQoS = 0;
+	myClient.subscribe(myTopic, subQoS);
+	if (!publisher) {
+		while (true) {
+			Thread.sleep(1000);
+		}
+	}
 } catch (Exception e) {
-e.printStackTrace();
-}
+		e.printStackTrace();
+	}
 }
 
 if (publisher) {
-while (true) {
-double temp = 80 + rnd.nextDouble() * 20.0;
-String val = String.format("T:%04.2f", temp);
-String pubMsg = "{\"value\":" + val + "}";
-int pubQoS = 0;
-MqttMessage message = new MqttMessage(pubMsg.getBytes());
-message.setQos(pubQoS);
-message.setRetained(false);
+	while (true) {
+		int number = rnd.nextInt();
+		String val = String.format("Generated number is " + number);
+		String pubMsg = "{\"value\":" + val + "}";
+		int pubQoS = 0;
+		MqttMessage message = new MqttMessage(pubMsg.getBytes());
+		message.setQos(pubQoS);
+		message.setRetained(false);
 
 log.info("Publishing to topic \"" + topic + "\" qos " + pubQoS + "\" value " + val);
 MqttDeliveryToken token = null;
 try {
 
-token = topic.publish(message);
+	token = topic.publish(message);
 
-token.waitForCompletion();
-Thread.sleep(1000);
+	token.waitForCompletion();
+	Thread.sleep(1000);
 } catch (Exception e) {
-e.printStackTrace();
+	e.printStackTrace();
 }
 }
 }
 
 try {
 if (subscriber) {
-Thread.sleep(5000);
+	Thread.sleep(5000);
 }
 myClient.disconnect();
 } catch (Exception e) {
-e.printStackTrace();
+	e.printStackTrace();
 }
 }
 }
